@@ -1,16 +1,23 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { generateObject } from "ai";
+import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { z } from "zod";
 
-export type ProviderName = "openai" | "anthropic";
+export type ProviderName = "openai" | "anthropic" | "gemini";
 
 export function getModel() {
   const provider = (process.env.AI_PROVIDER || "openai") as ProviderName;
-  const modelName = process.env.AI_MODEL || (provider === "openai" ? "gpt-4o-mini" : "claude-3-5-sonnet-latest");
+  const modelName = process.env.AI_MODEL || (
+    provider === "openai" ? "gpt-4o-mini" : provider === "anthropic" ? "claude-3-5-sonnet-latest" : "gemini-1.5-flash"
+  );
   if (provider === "anthropic") {
     const anthropic = createAnthropic({ apiKey: process.env.ANTHROPIC_API_KEY || "" });
     return anthropic(modelName);
+  }
+  if (provider === "gemini") {
+    const google = createGoogleGenerativeAI({ apiKey: process.env.GOOGLE_GENERATIVE_AI_API_KEY || "" });
+    return google(modelName);
   }
   const openai = createOpenAI({ apiKey: process.env.OPENAI_API_KEY || "" });
   return openai(modelName);
@@ -19,6 +26,7 @@ export function getModel() {
 function hasAIConfig(): boolean {
   const provider = (process.env.AI_PROVIDER || "openai").toLowerCase();
   if (provider === "anthropic") return Boolean(process.env.ANTHROPIC_API_KEY);
+  if (provider === "gemini") return Boolean(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
   return Boolean(process.env.OPENAI_API_KEY);
 }
 
