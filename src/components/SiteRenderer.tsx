@@ -10,11 +10,22 @@ import Map from "@/components/blocks/Map";
 import Tabs from "@/components/blocks/Tabs";
 import CodeRenderer from "@/components/CodeRenderer";
 
-export default function SiteRenderer({ site, blocks }: { site?: Site | null; blocks?: Block[] | null }) {
+export default function SiteRenderer({ site, blocks, currentPath }: { site?: Site | null; blocks?: Block[] | null; currentPath?: string }) {
+  const path = `/${(currentPath || "/").replace(/^\/+/, "").replace(/\/$/, "")}`;
+  const basePath = site ? `/preview/${site.siteId}` : undefined;
+
+  // Multi-page: if specific page exists, render its code
+  const page = site?.pages?.find((p) => `/${(p.path || "/").replace(/^\/+/, "")}` === path) || (path === "/" ? site?.pages?.find((p)=> p.path === "/" || p.path === "") : undefined);
+  if (page?.code?.html) {
+    return <CodeRenderer html={page.code.html} css={page.code.css} basePath={basePath} />;
+  }
+
+  // Single-code-site fallback
   const hasCode = Boolean(site?.code?.html);
   if (hasCode) {
-    return <CodeRenderer html={site?.code?.html || ""} css={site?.code?.css || ""} />;
+    return <CodeRenderer html={site?.code?.html || ""} css={site?.code?.css || ""} basePath={basePath} />;
   }
+
   const safeBlocks: Block[] = Array.isArray(blocks ?? site?.blocks) ? (blocks ?? site?.blocks ?? []) : [];
   return (
     <div>

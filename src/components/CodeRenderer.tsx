@@ -4,9 +4,10 @@ import DOMPurify from "isomorphic-dompurify";
 type Props = {
   html?: string | null;
   css?: string | null;
+  basePath?: string; // base href for internal links
 };
 
-export default function CodeRenderer({ html, css }: Props) {
+export default function CodeRenderer({ html, css, basePath }: Props) {
   const raw = String(html || "");
   // Extract body content if a full document is provided
   const withoutDoctype = raw.replace(/<!doctype[^>]*>/i, "");
@@ -16,7 +17,12 @@ export default function CodeRenderer({ html, css }: Props) {
     .replace(/<\/html>/i, "")
     .replace(/<head>[\s\S]*?<\/head>/i, "");
 
-  const safeHtml = DOMPurify.sanitize(fragment, {
+  // If we have a basePath, inject a <base> to keep links inside preview
+  const withBase = basePath
+    ? fragment.replace(/<head(\s[^>]*)?>/i, (m) => `${m}\n<base href="${basePath.replace(/\/$/, "")}/" />`)
+    : fragment;
+
+  const safeHtml = DOMPurify.sanitize(withBase, {
     USE_PROFILES: { html: true },
     ADD_TAGS: ["style"],
   });

@@ -42,6 +42,16 @@ const CodeSiteOutputSchema = z.object({
   }),
   seo: z.object({ title: z.string(), description: z.string().optional() }).optional(),
   code: z.object({ html: z.string(), css: z.string().optional() }),
+  // Multi-page support
+  pages: z
+    .array(
+      z.object({
+        path: z.string(),
+        title: z.string().optional(),
+        code: z.object({ html: z.string(), css: z.string().optional() }),
+      })
+    )
+    .default([]),
   // Keep for forward-compat; renderer will ignore when code is present
   blocks: z
     .array(
@@ -156,6 +166,15 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
     }),
     seo: z.object({ title: z.string(), description: z.string().optional() }).optional(),
     code: z.object({ html: z.string(), css: z.string().optional() }),
+    pages: z
+      .array(
+        z.object({
+          path: z.string(),
+          title: z.string().optional(),
+          code: z.object({ html: z.string(), css: z.string().optional() }),
+        })
+      )
+      .default([]),
     blocks: z
       .array(
         z.object({
@@ -176,11 +195,11 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
         {
           role: "system",
           content:
-            "You are a website template rewriter. Given a base HTML/CSS template and a business description, produce BRIGHT, FUN, accessible website code. Return ONLY JSON matching the schema with fields: siteId, theme, seo, code{html,css}. Use the provided template as a starting point and adapt content, colors (vibrant, high-contrast), and sections to the business. Avoid external scripts/fonts. No JavaScript. HTML must be self-contained and mobile-friendly.",
+            "You are a website template rewriter. Given a base HTML/CSS template and structured business info, produce BRIGHT, FUN, accessible website code. Return ONLY JSON matching the schema with fields: siteId, theme, seo, code{html,css}, pages[]. Use the provided template as a starting point and adapt content, colors (vibrant, high-contrast), and sections to the business. Avoid external scripts/fonts. No JavaScript. HTML must be self-contained and mobile-friendly. Create multiple pages (at least Home '/', plus 2-4 others like '/about', '/services' or '/menu', '/contact') with consistent header nav linking to those paths.",
         },
         {
           role: "user",
-          content: `Business summary: ${summary}\n\nBase template HTML:\n${base.html}\n\nBase template CSS:\n${base.css}\n\nInstructions:\n- Keep structure simple (header, hero, services/features, testimonials, contact, footer).\n- Use bright, playful colors and gradients.\n- Replace placeholders with realistic business-specific content.\n- Keep all styles in CSS. No inline event handlers or scripts.\n- Output JSON only. Use siteId ${siteId}.`,
+          content: `Business details: ${summary}\n\nBase template HTML:\n${base.html}\n\nBase template CSS:\n${base.css}\n\nInstructions:\n- Build multiple pages with meaningful content for this business.\n- Header nav should link to '/', and the other pages you create.\n- Use bright, playful colors and gradients.\n- Replace placeholders with realistic business-specific content (e.g., menu/services/hours/address).\n- Keep all styles in CSS. No inline event handlers or scripts.\n- Output JSON only. Use siteId ${siteId}.`,
         },
       ],
     });
