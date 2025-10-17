@@ -15,7 +15,31 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
-  const summary: string = body?.summary || "Local business website";
+  // Accept either plain summary or structured fields
+  const {
+    summary: plainSummary,
+    businessName,
+    tagline,
+    description,
+    services,
+    menuItems,
+    address,
+    hours,
+    colors,
+    extra,
+  } = body || {};
+
+  const parts: string[] = [];
+  if (businessName) parts.push(`Business name: ${businessName}`);
+  if (tagline) parts.push(`Tagline: ${tagline}`);
+  if (description) parts.push(`About: ${description}`);
+  if (Array.isArray(services) && services.length) parts.push(`Services: ${services.join(", ")}`);
+  if (Array.isArray(menuItems) && menuItems.length) parts.push(`Menu items: ${menuItems.join(", ")}`);
+  if (address) parts.push(`Address: ${address}`);
+  if (hours) parts.push(`Hours: ${hours}`);
+  if (colors && (colors.primary || colors.accent)) parts.push(`Brand colors: primary=${colors.primary || ""}, accent=${colors.accent || ""}`);
+  if (extra) parts.push(`Additional requests: ${extra}`);
+  const summary: string = (parts.join("\n") || plainSummary || "Local business website");
   const siteId = crypto.randomUUID();
   try {
     const schema = await generateSiteSchemaFromSummary(summary, siteId);
