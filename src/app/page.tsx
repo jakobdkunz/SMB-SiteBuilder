@@ -16,8 +16,8 @@ export default function Home() {
           <h1 className="text-5xl font-bold">Generate a modern website for your small business</h1>
           <p className="mt-4 text-neutral-600">Start from a beautiful template and let AI customize it with your business details.</p>
           <div className="mt-8 flex gap-4">
-            <Link href="/sign-up" className="bg-black text-white px-5 py-3 rounded">Get started</Link>
-            <Link href="/sign-in" className="border px-5 py-3 rounded">I have an account</Link>
+            <Link href="/generate" className="bg-black text-white px-5 py-3 rounded">Start building</Link>
+            <Link href="/sign-in" className="border px-5 py-3 rounded">Sign in</Link>
           </div>
         </div>
         <div className="border rounded-lg p-6">
