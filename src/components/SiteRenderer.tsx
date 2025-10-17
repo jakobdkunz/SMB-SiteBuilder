@@ -1,4 +1,4 @@
-import { Block } from "@/lib/siteSchema";
+import { Block, type Site } from "@/lib/siteSchema";
 import Hero from "@/components/blocks/Hero";
 import Contact from "@/components/blocks/Contact";
 import Features from "@/components/blocks/Features";
@@ -8,9 +8,14 @@ import Footer from "@/components/blocks/Footer";
 import Header from "@/components/blocks/Header";
 import Map from "@/components/blocks/Map";
 import Tabs from "@/components/blocks/Tabs";
+import CodeRenderer from "@/components/CodeRenderer";
 
-export default function SiteRenderer({ blocks }: { blocks?: Block[] | null }) {
-  const safeBlocks: Block[] = Array.isArray(blocks) ? blocks : [];
+export default function SiteRenderer({ site, blocks }: { site?: Site | null; blocks?: Block[] | null }) {
+  const hasCode = Boolean(site?.code?.html);
+  if (hasCode) {
+    return <CodeRenderer html={site?.code?.html || ""} css={site?.code?.css || ""} />;
+  }
+  const safeBlocks: Block[] = Array.isArray(blocks ?? site?.blocks) ? (blocks ?? site?.blocks ?? []) : [];
   return (
     <div>
       {safeBlocks.map((b) => {

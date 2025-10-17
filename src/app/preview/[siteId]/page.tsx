@@ -36,7 +36,7 @@ export default async function PreviewPage({ params }: { params: { siteId: string
   }
   return (
     <div>
-      <SiteRenderer blocks={site.blocks} />
+      <SiteRenderer site={site} blocks={site.blocks} />
     </div>
   );
 }

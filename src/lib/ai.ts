@@ -30,13 +30,10 @@ function hasAIConfig(): boolean {
   return Boolean(process.env.OPENAI_API_KEY);
 }
 
-function getProvider(): ProviderName {
-  const p = (process.env.AI_PROVIDER || "openai").toLowerCase();
-  if (p === "anthropic" || p === "gemini" || p === "openai") return p as ProviderName;
-  return "openai";
-}
+// Note: provider selection is handled implicitly by getModel()/hasAIConfig
 
-export const SiteSchema = z.object({
+// Output schema for code-based site generation consumed by the app-level SiteSchema
+const CodeSiteOutputSchema = z.object({
   siteId: z.string(),
   theme: z.object({
     primary: z.string(),
@@ -44,104 +41,133 @@ export const SiteSchema = z.object({
     fontFamily: z.string().default("Inter"),
   }),
   seo: z.object({ title: z.string(), description: z.string().optional() }).optional(),
-  blocks: z.array(z.object({
-    id: z.string(),
-    type: z.enum(["header","hero","features","services","testimonials","contact","map","tabs","footer"]),
-    variant: z.string().default("default"),
-    props: z.record(z.string(), z.any()).default({}),
-  })),
+  code: z.object({ html: z.string(), css: z.string().optional() }),
+  // Keep for forward-compat; renderer will ignore when code is present
+  blocks: z
+    .array(
+      z.object({
+        id: z.string(),
+        type: z.enum(["header","hero","features","services","testimonials","contact","map","tabs","footer"]),
+        variant: z.string().default("default"),
+        props: z.record(z.string(), z.any()).default({}),
+      })
+    )
+    .default([]),
 });
+
+function getBrightFunBaseTemplate() {
+  const html = `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{title}}</title>
+  </head>
+  <body class="sf-body">
+    <header class="sf-header">
+      <div class="sf-container">
+        <div class="sf-brand">{{brand}}</div>
+        <nav class="sf-nav">
+          <a href="#about">About</a>
+          <a href="#services">Services</a>
+          <a href="#contact">Contact</a>
+        </nav>
+      </div>
+    </header>
+    <section id="hero" class="sf-hero">
+      <div class="sf-container">
+        <h1>{{headline}}</h1>
+        <p>{{subheadline}}</p>
+        <a class="sf-button" href="#contact">{{cta_label}}</a>
+      </div>
+    </section>
+    <section id="services" class="sf-section">
+      <div class="sf-container">
+        <h2>What we offer</h2>
+        <ul class="sf-cards">
+          {{#each services}}
+            <li class="sf-card"><h3>{{name}}</h3><p>{{description}}</p><span>{{price}}</span></li>
+          {{/each}}
+        </ul>
+      </div>
+    </section>
+    <section id="reviews" class="sf-section sf-alt">
+      <div class="sf-container">
+        <h2>Happy customers</h2>
+        <ul class="sf-grid">
+          {{#each testimonials}}
+            <li class="sf-quote">“{{quote}}” — {{author}}</li>
+          {{/each}}
+        </ul>
+      </div>
+    </section>
+    <section id="contact" class="sf-section">
+      <div class="sf-container">
+        <h2>Get in touch</h2>
+        <p><strong>Phone:</strong> {{phone}}</p>
+        <p><strong>Email:</strong> {{email}}</p>
+        <p><strong>Address:</strong> {{address}}</p>
+      </div>
+    </section>
+    <footer class="sf-footer"><div class="sf-container">© {{year}} {{brand}}</div></footer>
+  </body>
+</html>`;
+
+  const css = `:root { --primary: #ff3ea5; --accent: #00e5ff; --bg: #fff7ed; --ink: #0f172a }
+* { box-sizing: border-box }
+body.sf-body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+.sf-container { max-width: 1100px; margin: 0 auto; padding: 16px; }
+.sf-header { position: sticky; top: 0; background: linear-gradient(90deg, var(--primary), var(--accent)); color: white; }
+.sf-header .sf-brand { font-weight: 800; font-size: 20px }
+.sf-header .sf-nav a { color: white; margin-left: 16px; text-decoration: none; font-weight: 600 }
+.sf-hero { padding: 80px 0; background: radial-gradient(600px circle at 20% 20%, rgba(255,62,165,.15), transparent), radial-gradient(600px circle at 80% 30%, rgba(0,229,255,.15), transparent); }
+.sf-hero h1 { font-size: 48px; margin: 0 0 12px }
+.sf-hero p { font-size: 18px; opacity: .8; margin: 0 0 24px }
+.sf-button { display: inline-block; background: var(--primary); color: white; padding: 12px 20px; border-radius: 999px; text-decoration: none; box-shadow: 0 10px 20px rgba(255,62,165,.25) }
+.sf-section { padding: 56px 0 }
+.sf-section.sf-alt { background: white }
+.sf-cards { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px }
+.sf-card { background: white; border: 2px solid #fde68a; border-radius: 16px; padding: 16px; box-shadow: 0 8px 24px rgba(0,0,0,.04) }
+.sf-grid { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px }
+.sf-quote { background: linear-gradient(180deg, #fff, #fffbeb); border: 1px solid #ffe08a; border-radius: 12px; padding: 16px }
+.sf-footer { background: #0f172a; color: white; padding: 24px 0; margin-top: 24px }
+`;
+  return { html, css };
+}
 
 function buildFallbackTemplate(summary: string, siteId: string) {
   const isPizza = /pizza/i.test(summary || "");
+  const { html, css } = getBrightFunBaseTemplate();
+  const filledHtml = html
+    .replaceAll("{{title}}", isPizza ? "Pizza Paradise" : "Your Bright New Site")
+    .replaceAll("{{brand}}", isPizza ? "Pizza Paradise" : "Sunbeam Studio")
+    .replaceAll("{{headline}}", isPizza ? "Hot, Fresh, Fun!" : "Bright, fun websites that pop")
+    .replaceAll("{{subheadline}}", summary || "Delightful design. Vivid colors. Clear results.")
+    .replaceAll("{{cta_label}}", isPizza ? "Order Now" : "Get Started")
+    .replace("{{year}}", String(new Date().getFullYear()))
+    .replace("{{phone}}", isPizza ? "555-PIZZA-NOW" : "(555) 123-4567")
+    .replace("{{email}}", isPizza ? "order@pizzashop.com" : "hello@sunbeam.studio")
+    .replace("{{address}}", "123 Main St")
+    .replace("{{#each services}}\n            <li class=\"sf-card\"><h3>{{name}}</h3><p>{{description}}</p><span>{{price}}</span></li>\n          {{/each}}", isPizza
+      ? `<li class="sf-card"><h3>Cheese Pizza</h3><p>12\" classic cheese</p><span>$10</span></li>
+         <li class="sf-card"><h3>Pepperoni</h3><p>12\" pepperoni</p><span>$12</span></li>
+         <li class="sf-card"><h3>Delivery</h3><p>Local delivery</p><span>$15</span></li>`
+      : `<li class="sf-card"><h3>Website</h3><p>Design + build</p><span>Custom</span></li>
+         <li class="sf-card"><h3>SEO</h3><p>Get found online</p><span>Custom</span></li>`
+    )
+    .replace("{{#each testimonials}}\n            <li class=\"sf-quote\">“{{quote}}” — {{author}}</li>\n          {{/each}}", isPizza
+      ? `<li class="sf-quote">“Best late-night pizza in town!” — Happy Customer</li>
+         <li class="sf-quote">“Fast delivery and great taste.” — Local Regular</li>`
+      : `<li class="sf-quote">“Our new site increased leads 2x.” — Local Owner</li>
+         <li class="sf-quote">“Looks amazing on mobile.” — Happy Client</li>`
+    );
   return {
     siteId,
-    theme: { primary: "#111827", accent: "#f97316", fontFamily: "Inter" },
-    seo: { title: isPizza ? "Pizza Shop" : "Your New Website", description: summary?.slice(0, 140) || "" },
-    blocks: [
-      {
-        id: "header-1",
-        type: "header",
-        variant: "simple",
-        props: { brand: isPizza ? "Pizza Paradise" : "Your Business", nav: [
-          { label: "Menu", href: "#menu" },
-          { label: "Reviews", href: "#reviews" },
-          { label: "Contact", href: "#contact" },
-        ] },
-      },
-      {
-        id: "hero-1",
-        type: "hero",
-        variant: "imageRight",
-        props: {
-          headline: isPizza ? "Hot, fresh pizza. Open 24/7." : "We help local businesses grow",
-          subheadline: summary || "Beautiful, fast websites built for conversions.",
-          primaryCta: { label: isPizza ? "Order Now" : "Get a Quote", href: isPizza ? "#services" : "/contact" },
-          image: { src: "/window.svg", alt: "Preview" },
-        },
-      },
-      {
-        id: "tabs-1",
-        type: "tabs",
-        variant: "default",
-        props: {
-          title: isPizza ? "Explore" : "Learn more",
-          tabs: [
-            { label: "Offerings", blocks: [
-              { id: "features-1", type: "features", variant: "cards", props: { title: isPizza ? "Our Delicious Offerings" : "Features", items: [
-                { title: isPizza ? "Cheese" : "Fast", description: isPizza ? "Classic mozzarella goodness." : "Quick turnaround.", icon: "🧀" },
-                { title: isPizza ? "Pepperoni" : "Quality", description: isPizza ? "Everyone’s favorite topping." : "High-quality design.", icon: "🍕" },
-                { title: isPizza ? "Delivery" : "Support", description: isPizza ? "$15 delivery available." : "We’re here when you need us.", icon: isPizza ? "🚗" : "💬" },
-              ] } },
-            ] },
-            { label: "Menu", blocks: [
-              { id: "services-1", type: "services", variant: "list", props: { title: "Menu", items: [
-                { name: "Cheese Pizza", description: "12\" classic cheese", price: "$10" },
-                { name: "Pepperoni Pizza", description: "12\" pepperoni", price: "$12" },
-                { name: "Delivery", description: "Local delivery", price: "$15" },
-              ] } },
-            ] },
-            { label: "Reviews", blocks: [
-              { id: "testimonials-1", type: "testimonials", variant: "grid", props: { title: "What our customers say", items: [
-                { quote: "Best late-night pizza in town!", author: "Happy Customer" },
-                { quote: "Fast delivery and great taste.", author: "Local Regular" },
-              ] } },
-            ] },
-          ],
-        },
-      },
-      {
-        id: "testimonials-1",
-        type: "testimonials",
-        variant: "grid",
-        props: {
-          title: "What customers say",
-          items: [
-            { quote: isPizza ? "Best late-night pizza in town!" : "Amazing results.", author: "Happy Customer" },
-            { quote: isPizza ? "Fast delivery and great taste." : "Great support.", author: "Local Regular" },
-          ],
-        },
-      },
-      {
-        id: "map-1",
-        type: "map",
-        variant: "embed",
-        props: { address: "123 Pizza Lane, Pizzaville, PV 12345" },
-      },
-      {
-        id: "contact-1",
-        type: "contact",
-        variant: "split",
-        props: { phone: "555-PIZZA-NOW", email: "order@pizzashop.com", address: "123 Main St" },
-      },
-      {
-        id: "footer-1",
-        type: "footer",
-        variant: "simple",
-        props: { copyright: "© 2025 Pizza Shop", links: [{ label: "Contact", href: "#contact" }] },
-      },
-    ],
-  } as z.infer<typeof SiteSchema>;
+    theme: { primary: "#ff3ea5", accent: "#00e5ff", fontFamily: "Inter" },
+    seo: { title: isPizza ? "Pizza Paradise" : "Bright, Fun Website", description: summary?.slice(0, 140) || "" },
+    code: { html: filledHtml, css },
+    blocks: [],
+  } as z.infer<typeof CodeSiteOutputSchema>;
 }
 
 export async function generateSiteSchemaFromSummary(summary: string, siteId: string) {
@@ -150,47 +176,27 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
     return buildFallbackTemplate(summary, siteId);
   }
 
-  const provider = getProvider();
   const model = getModel();
-
-  // Gemini is strict about response_schema object properties; relax props typing for generation
-  const GeminiBlockSchema = z.object({
-    id: z.string(),
-    type: z.enum(["hero","features","services","testimonials","contact","footer"]),
-    variant: z.string().default("default"),
-    props: z.any(),
-  });
-  const GeminiSiteSchema = z.object({
-    siteId: z.string(),
-    theme: z.object({
-      primary: z.string(),
-      accent: z.string().optional(),
-      fontFamily: z.string().default("Inter"),
-    }),
-    seo: z.object({ title: z.string(), description: z.string().optional() }).optional(),
-    blocks: z.array(GeminiBlockSchema),
-  });
-
-  const targetSchema = provider === "gemini" ? GeminiSiteSchema : SiteSchema;
+  const base = getBrightFunBaseTemplate();
+  const TargetSchema = CodeSiteOutputSchema;
   try {
     const { object } = await generateObject({
       model,
-      schema: targetSchema,
+      schema: TargetSchema,
       messages: [
         {
           role: "system",
           content:
-            "You are a website block composer. Output ONLY JSON matching the schema. Support structural edits, not just text: you may add 'header', 'tabs', and 'map' blocks. Prefer a professional light theme. Produce 5-8 blocks including: header with nav, hero, a tabs block whose panes contain blocks (e.g., features/services, reviews), a contact section, a map embed, and a footer. Fill realistic props.",
+            "You are a website template rewriter. Given a base HTML/CSS template and a business description, produce BRIGHT, FUN, accessible website code. Return ONLY JSON matching the schema with fields: siteId, theme, seo, code{html,css}. Use the provided template as a starting point and adapt content, colors (vibrant, high-contrast), and sections to the business. Avoid external scripts/fonts. No JavaScript. HTML must be self-contained and mobile-friendly.",
         },
         {
           role: "user",
-          content: `Business summary: ${summary}. Use siteId ${siteId}. Ensure valid JSON only. Provide concrete props for each block. If applicable, include tabs with panes named Menu, Reviews, Contact.`,
+          content: `Business summary: ${summary}\n\nBase template HTML:\n${base.html}\n\nBase template CSS:\n${base.css}\n\nInstructions:\n- Keep structure simple (header, hero, services/features, testimonials, contact, footer).\n- Use bright, playful colors and gradients.\n- Replace placeholders with realistic business-specific content.\n- Keep all styles in CSS. No inline event handlers or scripts.\n- Output JSON only. Use siteId ${siteId}.`,
         },
       ],
     });
-    // Validate final result against our stricter schema to keep renderer safe
-    const parsed = SiteSchema.safeParse(object);
-    return parsed.success ? parsed.data : (object as unknown as z.infer<typeof SiteSchema>);
+    const parsed = TargetSchema.safeParse(object);
+    return parsed.success ? parsed.data : (object as unknown as z.infer<typeof TargetSchema>);
   } catch {
     // If model fails or returns malformed JSON, fall back
     return buildFallbackTemplate(summary, siteId);
