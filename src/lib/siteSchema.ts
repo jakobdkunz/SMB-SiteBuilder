@@ -12,7 +12,7 @@ export const BlockSchema = z.object({
 export const SiteSchema = z.object({
   _id: z.string().optional(),
   siteId: z.string(),
-  ownerId: z.string(),
+  ownerId: z.string().optional(),
   title: z.string().default("Untitled"),
   seo: z.object({ title: z.string(), description: z.string().optional() }).optional(),
   theme: z.object({

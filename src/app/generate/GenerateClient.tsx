@@ -16,6 +16,12 @@ export default function GenerateClient() {
       body: JSON.stringify({ summary }),
     });
     const data = await res.json();
+    try {
+      if (data?.siteId) {
+        // Persist last generated siteId in localStorage for recovery across auth
+        localStorage.setItem("smb_last_site_id", data.siteId);
+      }
+    } catch {}
     setLoading(false);
     if (data?.siteId) router.push(`/preview/${data.siteId}`);
   };
