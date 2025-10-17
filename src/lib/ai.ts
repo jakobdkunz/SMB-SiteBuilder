@@ -52,33 +52,37 @@ export const SiteSchema = z.object({
   })),
 });
 
+function buildFallbackTemplate(summary: string, siteId: string) {
+  return {
+    siteId,
+    theme: { primary: "#111111", accent: "#6EE7B7", fontFamily: "Inter" },
+    seo: { title: "Your New Website", description: summary?.slice(0, 140) || "" },
+    blocks: [
+      {
+        id: "hero-1",
+        type: "hero",
+        variant: "imageRight",
+        props: {
+          headline: "We help local businesses grow",
+          subheadline: summary || "Beautiful, fast websites built for conversions.",
+          primaryCta: { label: "Get a Quote", href: "/contact" },
+          image: { src: "/placeholder.png", alt: "Website preview" },
+        },
+      },
+      {
+        id: "contact-1",
+        type: "contact",
+        variant: "split",
+        props: { phone: "(555) 000-0000", email: "hello@example.com", address: "123 Main St" },
+      },
+    ],
+  } as z.infer<typeof SiteSchema>;
+}
+
 export async function generateSiteSchemaFromSummary(summary: string, siteId: string) {
   if (!hasAIConfig()) {
     // Fallback deterministic template so the app works without API keys
-    return {
-      siteId,
-      theme: { primary: "#111111", accent: "#6EE7B7", fontFamily: "Inter" },
-      seo: { title: "Your New Website", description: summary?.slice(0, 140) || "" },
-      blocks: [
-        {
-          id: "hero-1",
-          type: "hero",
-          variant: "imageRight",
-          props: {
-            headline: "We help local businesses grow",
-            subheadline: summary || "Beautiful, fast websites built for conversions.",
-            primaryCta: { label: "Get a Quote", href: "/contact" },
-            image: { src: "/placeholder.png", alt: "Website preview" },
-          },
-        },
-        {
-          id: "contact-1",
-          type: "contact",
-          variant: "split",
-          props: { phone: "(555) 000-0000", email: "hello@example.com", address: "123 Main St" },
-        },
-      ],
-    } as unknown as z.infer<typeof SiteSchema>;
+    return buildFallbackTemplate(summary, siteId);
   }
 
   const provider = getProvider();
@@ -103,24 +107,30 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
   });
 
   const targetSchema = provider === "gemini" ? GeminiSiteSchema : SiteSchema;
-  const { object } = await generateObject({
-    model,
-    schema: targetSchema,
-    messages: [
-      {
-        role: "system",
-        content:
-          "You generate JSON for a small business website using a fixed block library. Return only JSON conforming to the provided schema.",
-      },
-      {
-        role: "user",
-        content: `Business summary: ${summary}. Create a site with 3-5 blocks and a strong hero. Use siteId ${siteId}.`,
-      },
-    ],
-  });
-  // Validate final result against our stricter schema to keep renderer safe
-  const parsed = SiteSchema.safeParse(object);
-  return parsed.success ? parsed.data : (object as unknown as z.infer<typeof SiteSchema>);
+  try {
+    const { object } = await generateObject({
+      model,
+      schema: targetSchema,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You generate JSON for a small business website using a fixed block library. Return only JSON conforming to the provided schema. Keep arrays short (<=4). Total blocks <= 5.",
+        },
+        {
+          role: "user",
+          content: `Business summary: ${summary}. Create a site with 3-5 blocks and a strong hero. Use siteId ${siteId}. Do not include invalid JSON; ensure arrays are proper JSON arrays, no stray quotes.`,
+        },
+      ],
+      maxTokens: 1500,
+    });
+    // Validate final result against our stricter schema to keep renderer safe
+    const parsed = SiteSchema.safeParse(object);
+    return parsed.success ? parsed.data : (object as unknown as z.infer<typeof SiteSchema>);
+  } catch (_err) {
+    // If model fails or returns malformed JSON, fall back
+    return buildFallbackTemplate(summary, siteId);
+  }
 }
 
 

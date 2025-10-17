@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 export default function GenerateClient() {
   const [summary, setSummary] = useState("");
   const [loading, setLoading] = useState(false);
+  const [log, setLog] = useState<string[]>([]);
   const router = useRouter();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setLog(["Starting generation..."]);
     const res = await fetch("/api/generate", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -17,6 +19,7 @@ export default function GenerateClient() {
     });
     if (!res.ok) {
       const text = await res.text();
+      setLog((l)=>[...l, "Error: "+(text || res.statusText)]);
       alert("Generation failed: " + (text || res.statusText));
       setLoading(false);
       return;
@@ -41,6 +44,14 @@ export default function GenerateClient() {
           {loading ? "Generating..." : "Generate"}
         </button>
       </form>
+      {loading && (
+        <div className="mt-6 border rounded p-3 bg-neutral-50">
+          <div className="text-sm font-medium">Live log</div>
+          <div className="mt-2 text-xs text-neutral-700 whitespace-pre-wrap">
+            {log.join("\n") || "Contacting model..."}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
