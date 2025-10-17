@@ -6,10 +6,11 @@ import Services from "@/components/blocks/Services";
 import Testimonials from "@/components/blocks/Testimonials";
 import Footer from "@/components/blocks/Footer";
 
-export default function SiteRenderer({ blocks }: { blocks: Block[] }) {
+export default function SiteRenderer({ blocks }: { blocks?: Block[] | null }) {
+  const safeBlocks: Block[] = Array.isArray(blocks) ? blocks : [];
   return (
     <div>
-      {blocks.map((b) => {
+      {safeBlocks.map((b) => {
         switch (b.type) {
           case "hero":
             return (
