@@ -15,6 +15,12 @@ export default function GenerateClient() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ summary }),
     });
+    if (!res.ok) {
+      const text = await res.text();
+      alert("Generation failed: " + (text || res.statusText));
+      setLoading(false);
+      return;
+    }
     const data = await res.json();
     try {
       if (data?.siteId) {

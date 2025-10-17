@@ -16,6 +16,12 @@ export function getModel() {
   return openai(modelName);
 }
 
+function hasAIConfig(): boolean {
+  const provider = (process.env.AI_PROVIDER || "openai").toLowerCase();
+  if (provider === "anthropic") return Boolean(process.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.OPENAI_API_KEY);
+}
+
 export const SiteSchema = z.object({
   siteId: z.string(),
   theme: z.object({
@@ -33,6 +39,34 @@ export const SiteSchema = z.object({
 });
 
 export async function generateSiteSchemaFromSummary(summary: string, siteId: string) {
+  if (!hasAIConfig()) {
+    // Fallback deterministic template so the app works without API keys
+    return {
+      siteId,
+      theme: { primary: "#111111", accent: "#6EE7B7", fontFamily: "Inter" },
+      seo: { title: "Your New Website", description: summary?.slice(0, 140) || "" },
+      blocks: [
+        {
+          id: "hero-1",
+          type: "hero",
+          variant: "imageRight",
+          props: {
+            headline: "We help local businesses grow",
+            subheadline: summary || "Beautiful, fast websites built for conversions.",
+            primaryCta: { label: "Get a Quote", href: "/contact" },
+            image: { src: "/placeholder.png", alt: "Website preview" },
+          },
+        },
+        {
+          id: "contact-1",
+          type: "contact",
+          variant: "split",
+          props: { phone: "(555) 000-0000", email: "hello@example.com", address: "123 Main St" },
+        },
+      ],
+    } as unknown as z.infer<typeof SiteSchema>;
+  }
+
   const model = getModel();
   const { object } = await generateObject({
     model,
