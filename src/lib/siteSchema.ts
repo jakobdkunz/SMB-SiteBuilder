@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const BlockTypeEnum = z.enum(["hero","features","services","testimonials","contact","footer"]);
+export const BlockTypeEnum = z.enum(["header","hero","features","services","testimonials","contact","map","tabs","footer"]);
 
 export const BlockSchema = z.object({
   id: z.string(),

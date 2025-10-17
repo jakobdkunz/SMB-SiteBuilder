@@ -5,6 +5,9 @@ import Features from "@/components/blocks/Features";
 import Services from "@/components/blocks/Services";
 import Testimonials from "@/components/blocks/Testimonials";
 import Footer from "@/components/blocks/Footer";
+import Header from "@/components/blocks/Header";
+import Map from "@/components/blocks/Map";
+import Tabs from "@/components/blocks/Tabs";
 
 export default function SiteRenderer({ blocks }: { blocks?: Block[] | null }) {
   const safeBlocks: Block[] = Array.isArray(blocks) ? blocks : [];
@@ -12,6 +15,14 @@ export default function SiteRenderer({ blocks }: { blocks?: Block[] | null }) {
     <div>
       {safeBlocks.map((b) => {
         switch (b.type) {
+          case "header":
+            return (
+              <Header
+                key={b.id}
+                brand={(b.props as { brand?: string }).brand}
+                nav={(b.props as { nav?: { label: string; href: string }[] }).nav}
+              />
+            );
           case "hero":
             return (
               <Hero
@@ -55,6 +66,28 @@ export default function SiteRenderer({ blocks }: { blocks?: Block[] | null }) {
                 email={(b.props as { email?: string }).email}
               />
             );
+          case "map":
+            return (
+              <Map
+                key={b.id}
+                address={(b.props as { address?: string }).address}
+                embedUrl={(b.props as { embedUrl?: string }).embedUrl}
+                height={(b.props as { height?: number }).height}
+              />
+            );
+          case "tabs": {
+            const tabs = (b.props as { title?: string; tabs?: { label: string; blocks: Block[] }[] });
+            return (
+              <Tabs
+                key={b.id}
+                title={tabs?.title}
+                tabs={(tabs?.tabs || []).map((t) => ({
+                  label: t.label,
+                  content: <SiteRenderer blocks={t.blocks} />,
+                }))}
+              />
+            );
+          }
           case "footer":
             return (
               <Footer
