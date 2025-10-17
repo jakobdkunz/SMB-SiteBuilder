@@ -28,7 +28,7 @@ export const SiteSchema = z.object({
     id: z.string(),
     type: z.enum(["hero","features","services","testimonials","contact","footer"]),
     variant: z.string().default("default"),
-    props: z.record(z.any()).default({}),
+    props: z.record(z.string(), z.any()).default({}),
   })),
 });
 

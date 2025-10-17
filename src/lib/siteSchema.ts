@@ -6,7 +6,7 @@ export const BlockSchema = z.object({
   id: z.string(),
   type: BlockTypeEnum,
   variant: z.string().default("default"),
-  props: z.record(z.any()).default({}),
+  props: z.record(z.string(), z.any()).default({}),
 });
 
 export const SiteSchema = z.object({
