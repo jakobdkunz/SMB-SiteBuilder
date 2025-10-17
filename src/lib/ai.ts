@@ -120,7 +120,7 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
   });
   // Validate final result against our stricter schema to keep renderer safe
   const parsed = SiteSchema.safeParse(object);
-  return parsed.success ? parsed.data : (object as any);
+  return parsed.success ? parsed.data : (object as unknown as z.infer<typeof SiteSchema>);
 }
 
 
