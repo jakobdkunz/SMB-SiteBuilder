@@ -8,9 +8,24 @@ export default function SiteRenderer({ blocks }: { blocks: Block[] }) {
       {blocks.map((b) => {
         switch (b.type) {
           case "hero":
-            return <Hero key={b.id} {...(b.props as any)} />;
+            return (
+              <Hero
+                key={b.id}
+                headline={(b.props as { headline?: string }).headline}
+                subheadline={(b.props as { subheadline?: string }).subheadline}
+                primaryCta={(b.props as { primaryCta?: { label: string; href: string } }).primaryCta}
+                image={(b.props as { image?: { src: string; alt?: string } }).image}
+              />
+            );
           case "contact":
-            return <Contact key={b.id} {...(b.props as any)} />;
+            return (
+              <Contact
+                key={b.id}
+                phone={(b.props as { phone?: string }).phone}
+                address={(b.props as { address?: string }).address}
+                email={(b.props as { email?: string }).email}
+              />
+            );
           default:
             return null;
         }

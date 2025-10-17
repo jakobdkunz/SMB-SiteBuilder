@@ -5,6 +5,8 @@ type Props = {
   image?: { src: string; alt?: string };
 };
 
+import Image from "next/image";
+
 export default function Hero({ headline, subheadline, primaryCta, image }: Props) {
   return (
     <section className="px-6 py-20 mx-auto max-w-6xl grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
@@ -18,7 +20,7 @@ export default function Hero({ headline, subheadline, primaryCta, image }: Props
         )}
       </div>
       {image && (
-        <img src={image.src} alt={image.alt || ""} className="w-full rounded-lg shadow" />
+        <Image src={image.src} alt={image.alt || ""} width={800} height={600} className="w-full h-auto rounded-lg shadow" />
       )}
     </section>
   );
