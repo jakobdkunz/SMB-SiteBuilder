@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   const summary: string = body?.summary || "Local business website";
   const siteId = randomUUID();
   const schema = await generateSiteSchemaFromSummary(summary, siteId);
-  const ownerId = userId || getOrCreateGuestId();
+  const ownerId = userId || await getOrCreateGuestId();
   const parsed = SiteSchema.parse({ ...schema, siteId, ownerId, title: schema?.seo?.title || "Untitled" });
   setSite(parsed);
   return NextResponse.json({ siteId });
