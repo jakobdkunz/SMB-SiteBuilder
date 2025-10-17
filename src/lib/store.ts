@@ -1,7 +1,6 @@
 import type { Site } from "@/lib/siteSchema";
 
 declare global {
-  // eslint-disable-next-line no-var
   var __SITES__: Map<string, Site> | undefined;
 }
 
