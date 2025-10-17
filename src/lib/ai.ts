@@ -122,12 +122,11 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
           content: `Business summary: ${summary}. Create a site with 3-5 blocks and a strong hero. Use siteId ${siteId}. Do not include invalid JSON; ensure arrays are proper JSON arrays, no stray quotes.`,
         },
       ],
-      maxTokens: 1500,
     });
     // Validate final result against our stricter schema to keep renderer safe
     const parsed = SiteSchema.safeParse(object);
     return parsed.success ? parsed.data : (object as unknown as z.infer<typeof SiteSchema>);
-  } catch (_err) {
+  } catch {
     // If model fails or returns malformed JSON, fall back
     return buildFallbackTemplate(summary, siteId);
   }
