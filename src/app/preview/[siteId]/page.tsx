@@ -6,7 +6,8 @@ import { headers } from "next/headers";
 import { getAbsoluteBaseUrl } from "@/lib/url";
 
 async function getSite(siteId: string) {
-  const host = headers().get("host");
+  const hdrs = await headers();
+  const host = hdrs.get("host");
   const base = host ? `https://${host}` : (process.env.NEXT_PUBLIC_API_BASE || getAbsoluteBaseUrl());
   const res = await fetch(`${base}/api/sites/${siteId}`, { cache: "no-store" });
   if (!res.ok) return null;
