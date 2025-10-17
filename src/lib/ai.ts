@@ -30,6 +30,12 @@ function hasAIConfig(): boolean {
   return Boolean(process.env.OPENAI_API_KEY);
 }
 
+function getProvider(): ProviderName {
+  const p = (process.env.AI_PROVIDER || "openai").toLowerCase();
+  if (p === "anthropic" || p === "gemini" || p === "openai") return p as ProviderName;
+  return "openai";
+}
+
 export const SiteSchema = z.object({
   siteId: z.string(),
   theme: z.object({
@@ -75,10 +81,31 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
     } as unknown as z.infer<typeof SiteSchema>;
   }
 
+  const provider = getProvider();
   const model = getModel();
+
+  // Gemini is strict about response_schema object properties; relax props typing for generation
+  const GeminiBlockSchema = z.object({
+    id: z.string(),
+    type: z.enum(["hero","features","services","testimonials","contact","footer"]),
+    variant: z.string().default("default"),
+    props: z.any(),
+  });
+  const GeminiSiteSchema = z.object({
+    siteId: z.string(),
+    theme: z.object({
+      primary: z.string(),
+      accent: z.string().optional(),
+      fontFamily: z.string().default("Inter"),
+    }),
+    seo: z.object({ title: z.string(), description: z.string().optional() }).optional(),
+    blocks: z.array(GeminiBlockSchema),
+  });
+
+  const targetSchema = provider === "gemini" ? GeminiSiteSchema : SiteSchema;
   const { object } = await generateObject({
     model,
-    schema: SiteSchema,
+    schema: targetSchema,
     messages: [
       {
         role: "system",
@@ -91,7 +118,9 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
       },
     ],
   });
-  return object;
+  // Validate final result against our stricter schema to keep renderer safe
+  const parsed = SiteSchema.safeParse(object);
+  return parsed.success ? parsed.data : (object as any);
 }
 
 
