@@ -1,7 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { generateSiteSchemaFromSummary } from "@/lib/ai";
-import { randomUUID } from "crypto";
 import { setSite } from "@/lib/store";
 import { SiteSchema } from "@/lib/siteSchema";
 import { getOrCreateGuestId } from "@/lib/guest";
@@ -11,7 +10,7 @@ export async function POST(req: Request) {
 
   const body = await req.json().catch(() => ({}));
   const summary: string = body?.summary || "Local business website";
-  const siteId = randomUUID();
+  const siteId = crypto.randomUUID();
   try {
     const schema = await generateSiteSchemaFromSummary(summary, siteId);
     const ownerId = userId || await getOrCreateGuestId();
