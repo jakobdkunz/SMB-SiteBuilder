@@ -24,8 +24,9 @@ export async function POST(req: Request) {
     setSite(parsed);
     return NextResponse.json({ siteId });
   } catch (err) {
-    console.error("/api/generate error", err);
-    return NextResponse.json({ error: "Failed to generate site" }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("/api/generate error", message);
+    return NextResponse.json({ error: message || "Failed to generate site" }, { status: 500 });
   }
 }
 

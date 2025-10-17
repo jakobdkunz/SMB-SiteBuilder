@@ -18,9 +18,16 @@ export default function GenerateClient() {
       body: JSON.stringify({ summary }),
     });
     if (!res.ok) {
-      const text = await res.text();
-      setLog((l)=>[...l, "Error: "+(text || res.statusText)]);
-      alert("Generation failed: " + (text || res.statusText));
+      let message = res.statusText;
+      try {
+        const data = await res.json();
+        if (data?.error) message = data.error;
+      } catch {
+        const text = await res.text();
+        if (text) message = text;
+      }
+      setLog((l)=>[...l, "Error: "+(message || "Unknown error")]);
+      alert("Generation failed: " + (message || "Unknown error"));
       setLoading(false);
       return;
     }

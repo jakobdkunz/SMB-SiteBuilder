@@ -135,46 +135,13 @@ body.sf-body { margin: 0; font-family: Inter, system-ui, sans-serif; color: var(
   return { html, css };
 }
 
-function buildFallbackTemplate(summary: string, siteId: string) {
-  const isPizza = /pizza/i.test(summary || "");
-  const { html, css } = getBrightFunBaseTemplate();
-  const filledHtml = html
-    .replaceAll("{{title}}", isPizza ? "Pizza Paradise" : "Your Bright New Site")
-    .replaceAll("{{brand}}", isPizza ? "Pizza Paradise" : "Sunbeam Studio")
-    .replaceAll("{{headline}}", isPizza ? "Hot, Fresh, Fun!" : "Bright, fun websites that pop")
-    .replaceAll("{{subheadline}}", summary || "Delightful design. Vivid colors. Clear results.")
-    .replaceAll("{{cta_label}}", isPizza ? "Order Now" : "Get Started")
-    .replace("{{year}}", String(new Date().getFullYear()))
-    .replace("{{phone}}", isPizza ? "555-PIZZA-NOW" : "(555) 123-4567")
-    .replace("{{email}}", isPizza ? "order@pizzashop.com" : "hello@sunbeam.studio")
-    .replace("{{address}}", "123 Main St")
-    .replace("{{#each services}}\n            <li class=\"sf-card\"><h3>{{name}}</h3><p>{{description}}</p><span>{{price}}</span></li>\n          {{/each}}", isPizza
-      ? `<li class="sf-card"><h3>Cheese Pizza</h3><p>12\" classic cheese</p><span>$10</span></li>
-         <li class="sf-card"><h3>Pepperoni</h3><p>12\" pepperoni</p><span>$12</span></li>
-         <li class="sf-card"><h3>Delivery</h3><p>Local delivery</p><span>$15</span></li>`
-      : `<li class="sf-card"><h3>Website</h3><p>Design + build</p><span>Custom</span></li>
-         <li class="sf-card"><h3>SEO</h3><p>Get found online</p><span>Custom</span></li>`
-    )
-    .replace("{{#each testimonials}}\n            <li class=\"sf-quote\">“{{quote}}” — {{author}}</li>\n          {{/each}}", isPizza
-      ? `<li class="sf-quote">“Best late-night pizza in town!” — Happy Customer</li>
-         <li class="sf-quote">“Fast delivery and great taste.” — Local Regular</li>`
-      : `<li class="sf-quote">“Our new site increased leads 2x.” — Local Owner</li>
-         <li class="sf-quote">“Looks amazing on mobile.” — Happy Client</li>`
-    );
-  return {
-    siteId,
-    theme: { primary: "#ff3ea5", accent: "#00e5ff", fontFamily: "Inter" },
-    seo: { title: isPizza ? "Pizza Paradise" : "Bright, Fun Website", description: summary?.slice(0, 140) || "" },
-    code: { html: filledHtml, css },
-    blocks: [],
-  } as z.infer<typeof CodeSiteOutputSchema>;
-}
+// (fallback builder removed – errors are propagated)
 
 export async function generateSiteSchemaFromSummary(summary: string, siteId: string) {
   if (!hasAIConfig()) {
-    // Fallback deterministic template so the app works without API keys
-    console.warn("AI disabled or missing API keys. Using fallback template.");
-    return buildFallbackTemplate(summary, siteId);
+    throw new Error(
+      "AI not configured. Set AI_PROVIDER, AI_MODEL, and the corresponding API key."
+    );
   }
 
   const model = getModel();
@@ -197,11 +164,14 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
       ],
     });
     const parsed = TargetSchema.safeParse(object);
-    return parsed.success ? parsed.data : (object as unknown as z.infer<typeof TargetSchema>);
-  } catch {
-    // If model fails or returns malformed JSON, fall back
-    console.error("AI generation failed; using fallback template");
-    return buildFallbackTemplate(summary, siteId);
+    if (!parsed.success) {
+      throw new Error("AI returned invalid schema");
+    }
+    return parsed.data;
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("AI generation failed:", msg);
+    throw new Error(msg || "AI generation failed");
   }
 }
 
