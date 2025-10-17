@@ -2,9 +2,13 @@ export const dynamic = "force-dynamic";
 import SiteRenderer from "@/components/SiteRenderer";
 import { SiteSchema } from "@/lib/siteSchema";
 import Script from "next/script";
+import { headers } from "next/headers";
+import { getAbsoluteBaseUrl } from "@/lib/url";
 
 async function getSite(siteId: string) {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_BASE || ""}/api/sites/${siteId}`, { cache: "no-store" });
+  const host = headers().get("host");
+  const base = host ? `https://${host}` : (process.env.NEXT_PUBLIC_API_BASE || getAbsoluteBaseUrl());
+  const res = await fetch(`${base}/api/sites/${siteId}`, { cache: "no-store" });
   if (!res.ok) return null;
   const data = await res.json();
   const parsed = SiteSchema.safeParse(data);
