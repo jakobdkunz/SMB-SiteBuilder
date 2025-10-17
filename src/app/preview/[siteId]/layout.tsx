@@ -1,67 +1,24 @@
-"use client";
-import { useState } from "react";
-import Link from "next/link";
+import PreviewSidebarClient from "./PreviewSidebarClient";
+import type { ReactNode } from "react";
 
-export default function PreviewLayout({ children, params }: { children: React.ReactNode; params: { siteId: string } }) {
-  const [message, setMessage] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [explanation, setExplanation] = useState<string | null>(null);
-
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!message.trim()) return;
-    setSubmitting(true);
-    setExplanation(null);
-    try {
-      const res = await fetch("/api/edit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ siteId: params.siteId, message }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(()=>({}));
-        throw new Error(data?.error || res.statusText);
-      }
-      const data = await res.json();
-      setExplanation(data?.explanation || "");
-      // Hard refresh to reload updated site from API
-      location.reload();
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      setExplanation(`Error: ${msg}`);
-    } finally {
-      setSubmitting(false);
-      setMessage("");
-    }
-  };
-
+export default function PreviewLayout({ children, params }: { children: ReactNode; params: Promise<{ siteId: string }> }) {
+  // Next 15 passes params as a Promise in layouts
+  // We render a static shell here and delegate interactivity to a client component
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const awaited = (params as unknown) as { siteId: string } | Promise<{ siteId: string }>;
+  const siteIdPromise = Promise.resolve(awaited as Promise<{ siteId: string }>);
   return (
     <div className="w-full h-[calc(100vh-64px)] grid grid-cols-1 lg:grid-cols-[380px_1fr]">
-      <aside className="border-r h-full overflow-auto p-6 space-y-4">
-        <div className="text-sm text-neutral-500">Previewing site</div>
-        <div className="text-lg font-semibold">Site editor</div>
-        <form onSubmit={onSubmit} className="space-y-3">
-          <textarea className="w-full border rounded p-2" rows={4} placeholder="Ask for a change (e.g., 'Make the hero headline bigger, add About page')" value={message} onChange={e=>setMessage(e.target.value)} />
-          <button disabled={submitting || !message.trim()} className="w-full bg-black text-white px-4 py-2 rounded disabled:opacity-50">
-            {submitting ? "Applying..." : "Apply change"}
-          </button>
-        </form>
-        {explanation && (
-          <div className="text-xs text-neutral-700 whitespace-pre-wrap border rounded p-3 bg-neutral-50">{explanation}</div>
-        )}
-        <div className="text-xs text-neutral-500">
-          <div className="font-semibold mb-1">Quick links</div>
-          <ul className="space-y-1">
-            <li><Link className="underline" href={`/preview/${params.siteId}`}>Home</Link></li>
-            <li><Link className="underline" href={`/preview/${params.siteId}/about`}>About</Link></li>
-            <li><Link className="underline" href={`/preview/${params.siteId}/services`}>Services</Link></li>
-            <li><Link className="underline" href={`/preview/${params.siteId}/contact`}>Contact</Link></li>
-          </ul>
-        </div>
-      </aside>
+      {/* @ts-expect-error Async Server Component interop */}
+      <SidebarWrapper siteIdPromise={siteIdPromise} />
       <main className="relative h-full overflow-auto">{children}</main>
     </div>
   );
+}
+
+async function SidebarWrapper({ siteIdPromise }: { siteIdPromise: Promise<{ siteId: string }> }) {
+  const { siteId } = await siteIdPromise;
+  return <PreviewSidebarClient siteId={siteId} />;
 }
 
 
