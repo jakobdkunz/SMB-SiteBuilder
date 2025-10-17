@@ -7,13 +7,16 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/api/(.*)",
   "/preview/(.*)",
+  "/_not-found",
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
   if (isPublicRoute(req)) return;
   const { userId } = await auth();
   if (!userId) {
-    const url = new URL("/sign-in", req.url);
+    const url = req.nextUrl.clone();
+    url.pathname = "/sign-in";
+    url.search = "";
     return NextResponse.redirect(url);
   }
 });
