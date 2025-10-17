@@ -173,6 +173,7 @@ function buildFallbackTemplate(summary: string, siteId: string) {
 export async function generateSiteSchemaFromSummary(summary: string, siteId: string) {
   if (!hasAIConfig()) {
     // Fallback deterministic template so the app works without API keys
+    console.warn("AI disabled or missing API keys. Using fallback template.");
     return buildFallbackTemplate(summary, siteId);
   }
 
@@ -199,6 +200,7 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
     return parsed.success ? parsed.data : (object as unknown as z.infer<typeof TargetSchema>);
   } catch {
     // If model fails or returns malformed JSON, fall back
+    console.error("AI generation failed; using fallback template");
     return buildFallbackTemplate(summary, siteId);
   }
 }

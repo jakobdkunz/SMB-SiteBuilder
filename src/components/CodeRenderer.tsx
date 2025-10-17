@@ -7,7 +7,16 @@ type Props = {
 };
 
 export default function CodeRenderer({ html, css }: Props) {
-  const safeHtml = DOMPurify.sanitize(String(html || ""), {
+  const raw = String(html || "");
+  // Extract body content if a full document is provided
+  const withoutDoctype = raw.replace(/<!doctype[^>]*>/i, "");
+  const bodyMatch = withoutDoctype.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
+  const fragment = bodyMatch ? bodyMatch[1] : withoutDoctype
+    .replace(/<html[^>]*>/i, "")
+    .replace(/<\/html>/i, "")
+    .replace(/<head>[\s\S]*?<\/head>/i, "");
+
+  const safeHtml = DOMPurify.sanitize(fragment, {
     USE_PROFILES: { html: true },
     ADD_TAGS: ["style"],
   });
