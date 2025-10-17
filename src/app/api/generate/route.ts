@@ -6,7 +6,13 @@ import { SiteSchema } from "@/lib/siteSchema";
 import { getOrCreateGuestId } from "@/lib/guest";
 
 export async function POST(req: Request) {
-  const { userId } = await auth();
+  let userId: string | null = null;
+  try {
+    const authCtx = await auth();
+    userId = authCtx.userId;
+  } catch {
+    userId = null; // proceed as guest if middleware context isn't present
+  }
 
   const body = await req.json().catch(() => ({}));
   const summary: string = body?.summary || "Local business website";
