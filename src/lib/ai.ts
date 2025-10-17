@@ -146,7 +146,28 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
 
   const model = getModel();
   const base = getBrightFunBaseTemplate();
-  const TargetSchema = CodeSiteOutputSchema;
+  // Gemini is stricter about object properties; relax blocks.props typing for that provider
+  const GeminiCodeSiteSchema = z.object({
+    siteId: z.string(),
+    theme: z.object({
+      primary: z.string(),
+      accent: z.string().optional(),
+      fontFamily: z.string().default("Inter"),
+    }),
+    seo: z.object({ title: z.string(), description: z.string().optional() }).optional(),
+    code: z.object({ html: z.string(), css: z.string().optional() }),
+    blocks: z
+      .array(
+        z.object({
+          id: z.string(),
+          type: z.enum(["header","hero","features","services","testimonials","contact","map","tabs","footer"]),
+          variant: z.string().default("default"),
+          props: z.any(),
+        })
+      )
+      .default([]),
+  });
+  const TargetSchema = (process.env.AI_PROVIDER || "openai").toLowerCase() === "gemini" ? GeminiCodeSiteSchema : CodeSiteOutputSchema;
   try {
     const { object } = await generateObject({
       model,
