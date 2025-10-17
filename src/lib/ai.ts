@@ -53,27 +53,77 @@ export const SiteSchema = z.object({
 });
 
 function buildFallbackTemplate(summary: string, siteId: string) {
+  const isPizza = /pizza/i.test(summary || "");
   return {
     siteId,
-    theme: { primary: "#111111", accent: "#6EE7B7", fontFamily: "Inter" },
-    seo: { title: "Your New Website", description: summary?.slice(0, 140) || "" },
+    theme: { primary: "#0a0a0a", accent: "#f97316", fontFamily: "Inter" },
+    seo: { title: isPizza ? "Pizza Shop" : "Your New Website", description: summary?.slice(0, 140) || "" },
     blocks: [
       {
         id: "hero-1",
         type: "hero",
         variant: "imageRight",
         props: {
-          headline: "We help local businesses grow",
+          headline: isPizza ? "Hot, fresh pizza. Open 24/7." : "We help local businesses grow",
           subheadline: summary || "Beautiful, fast websites built for conversions.",
-          primaryCta: { label: "Get a Quote", href: "/contact" },
-          image: { src: "/placeholder.png", alt: "Website preview" },
+          primaryCta: { label: isPizza ? "Order Now" : "Get a Quote", href: isPizza ? "#services" : "/contact" },
+          image: { src: "/window.svg", alt: "Preview" },
+        },
+      },
+      {
+        id: "features-1",
+        type: "features",
+        variant: "cards",
+        props: {
+          title: isPizza ? "Why choose our pizza?" : "Why choose us?",
+          items: [
+            { title: isPizza ? "Cheese" : "Fast", description: isPizza ? "Classic mozzarella goodness." : "Quick turnaround.", icon: "🧀" },
+            { title: isPizza ? "Pepperoni" : "Quality", description: isPizza ? "Everyone’s favorite topping." : "High-quality design.", icon: "🍕" },
+            { title: isPizza ? "Delivery" : "Support", description: isPizza ? "$15 delivery available." : "We’re here when you need us.", icon: isPizza ? "🚗" : "💬" },
+          ],
+        },
+      },
+      {
+        id: "services-1",
+        type: "services",
+        variant: "list",
+        props: {
+          title: isPizza ? "Menu" : "Services",
+          items: isPizza
+            ? [
+                { name: "Cheese Pizza", description: "12\" classic cheese", price: "$10" },
+                { name: "Pepperoni Pizza", description: "12\" pepperoni", price: "$12" },
+                { name: "Delivery", description: "Local delivery", price: "$15" },
+              ]
+            : [
+                { name: "Website", description: "Design and build", price: "Custom" },
+                { name: "SEO", description: "Get found online", price: "Custom" },
+              ],
+        },
+      },
+      {
+        id: "testimonials-1",
+        type: "testimonials",
+        variant: "grid",
+        props: {
+          title: "What customers say",
+          items: [
+            { quote: isPizza ? "Best late-night pizza in town!" : "Amazing results.", author: "Happy Customer" },
+            { quote: isPizza ? "Fast delivery and great taste." : "Great support.", author: "Local Regular" },
+          ],
         },
       },
       {
         id: "contact-1",
         type: "contact",
         variant: "split",
-        props: { phone: "(555) 000-0000", email: "hello@example.com", address: "123 Main St" },
+        props: { phone: "555-PIZZA-NOW", email: "order@pizzashop.com", address: "123 Main St" },
+      },
+      {
+        id: "footer-1",
+        type: "footer",
+        variant: "simple",
+        props: { copyright: "© 2025 Pizza Shop", links: [{ label: "Contact", href: "#contact" }] },
       },
     ],
   } as z.infer<typeof SiteSchema>;
@@ -115,11 +165,11 @@ export async function generateSiteSchemaFromSummary(summary: string, siteId: str
         {
           role: "system",
           content:
-            "You generate JSON for a small business website using a fixed block library. Return only JSON conforming to the provided schema. Keep arrays short (<=4). Total blocks <= 5.",
+            "You are a website block composer. Output ONLY JSON matching the provided schema. Use 4-5 blocks: hero, features OR services, testimonials, contact, and optional footer. Fill props with realistic content. For a pizza shop, include cheese and pepperoni menu items and a delivery option with price.",
         },
         {
           role: "user",
-          content: `Business summary: ${summary}. Create a site with 3-5 blocks and a strong hero. Use siteId ${siteId}. Do not include invalid JSON; ensure arrays are proper JSON arrays, no stray quotes.`,
+          content: `Business summary: ${summary}. Use siteId ${siteId}. Ensure valid JSON only. Provide concrete props for each block.`,
         },
       ],
     });
