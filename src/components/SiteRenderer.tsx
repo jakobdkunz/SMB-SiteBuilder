@@ -17,7 +17,9 @@ export default function SiteRenderer({ site, blocks, currentPath }: { site?: Sit
   // Multi-page: if specific page exists, render its code
   const page = site?.pages?.find((p) => `/${(p.path || "/").replace(/^\/+/, "")}` === path) || (path === "/" ? site?.pages?.find((p)=> p.path === "/" || p.path === "") : undefined);
   if (page?.code?.html) {
-    return <CodeRenderer html={page.code.html} css={page.code.css} basePath={basePath} />;
+    const siteCss = site?.code?.css || "";
+    const pageCss = page.code.css || "";
+    return <CodeRenderer html={page.code.html} css={`${siteCss}\n${pageCss}`.trim()} basePath={basePath} />;
   }
 
   // Single-code-site fallback

@@ -17,12 +17,17 @@ export default function CodeRenderer({ html, css, basePath }: Props) {
     .replace(/<\/html>/i, "")
     .replace(/<head>[\s\S]*?<\/head>/i, "");
 
-  // If we have a basePath, inject a <base> to keep links inside preview
-  const withBase = basePath
-    ? fragment.replace(/<head(\s[^>]*)?>/i, (m) => `${m}\n<base href="${basePath.replace(/\/$/, "")}/" />`)
+  // Rewrite internal links to stay within preview namespace
+  const pref = (basePath || "").replace(/\/$/, "");
+  const withRewrittenLinks = pref
+    ? fragment
+        // root-relative: href="/contact" -> href="{pref}/contact"
+        .replace(/href=\"\/(?!\/)([^\"#]+)\"/g, (_m, p1) => `href=\"${pref}/${p1}\"`)
+        // relative without protocol: href="about" or "./about" or "../about"
+        .replace(/href=\"(?![a-zA-Z]+:|\/\/|#)([^\"]+)\"/g, (_m, p1) => `href=\"${pref}/${p1.replace(/^\.\//, "")}\"`)
     : fragment;
 
-  const safeHtml = DOMPurify.sanitize(withBase, {
+  const safeHtml = DOMPurify.sanitize(withRewrittenLinks, {
     USE_PROFILES: { html: true },
     ADD_TAGS: ["style"],
   });
