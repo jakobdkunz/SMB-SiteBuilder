@@ -21,10 +21,12 @@ export default function CodeRenderer({ html, css, basePath }: Props) {
   const pref = (basePath || "").replace(/\/$/, "");
   const withRewrittenLinks = pref
     ? fragment
-        // root-relative: href="/contact" -> href="{pref}/contact"
+        // Avoid double prefix: if it already starts with {pref}, skip
+        .replace(new RegExp(`href=\\"${pref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:/|\\\"|#)`, "g"), (m) => m)
+        // root-relative (not protocol-relative): href="/contact"
         .replace(/href=\"\/(?!\/)([^\"#]+)\"/g, (_m, p1) => `href=\"${pref}/${p1}\"`)
         // relative without protocol: href="about" or "./about" or "../about"
-        .replace(/href=\"(?![a-zA-Z]+:|\/\/|#)([^\"]+)\"/g, (_m, p1) => `href=\"${pref}/${p1.replace(/^\.\//, "")}\"`)
+        .replace(/href=\"(?![a-zA-Z]+:|\/\/|#)([^\"]+)\"/g, (_m, p1) => `href=\"${pref}/${p1.replace(/^\.\//, "").replace(/^\.\./, "")}\"`)
     : fragment;
 
   const safeHtml = DOMPurify.sanitize(withRewrittenLinks, {

@@ -1,7 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { generateSiteSchemaFromSummary } from "@/lib/ai";
-import { setSite } from "@/lib/store";
+import { setSite, persistSite } from "@/lib/store";
 import { SiteSchema } from "@/lib/siteSchema";
 import { getOrCreateGuestId } from "@/lib/guest";
 
@@ -46,6 +46,7 @@ export async function POST(req: Request) {
     const ownerId = userId || await getOrCreateGuestId();
     const parsed = SiteSchema.parse({ ...schema, siteId, ownerId, title: schema?.seo?.title || "Untitled" });
     setSite(parsed);
+    await persistSite(parsed);
     return NextResponse.json({ siteId });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
