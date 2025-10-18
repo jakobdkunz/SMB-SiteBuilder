@@ -19,14 +19,20 @@ export default function CodeRenderer({ html, css, basePath }: Props) {
 
   // Rewrite internal links to stay within preview namespace
   const pref = (basePath || "").replace(/\/$/, "");
+  const hrefRegex = /href=\"([^\"]+)\"/g;
   const withRewrittenLinks = pref
-    ? fragment
-        // Avoid double prefix: if it already starts with {pref}, skip
-        .replace(new RegExp(`href=\\"${pref.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:/|\\\"|#)`, "g"), (m) => m)
-        // root-relative (not protocol-relative): href="/contact"
-        .replace(/href=\"\/(?!\/)([^\"#]+)\"/g, (_m, p1) => `href=\"${pref}/${p1}\"`)
-        // relative without protocol: href="about" or "./about" or "../about"
-        .replace(/href=\"(?![a-zA-Z]+:|\/\/|#)([^\"]+)\"/g, (_m, p1) => `href=\"${pref}/${p1.replace(/^\.\//, "").replace(/^\.\./, "")}\"`)
+    ? fragment.replace(hrefRegex, (_m, url) => {
+        const trimmed = String(url || "");
+        if (!trimmed) return `href=\"${url}\"`;
+        const lower = trimmed.toLowerCase();
+        // Skip external, anchors, protocols, protocol-relative, mailto/tel, already prefixed
+        const isExternal = /^(https?:\/\/|\/{2}|mailto:|tel:|#)/i.test(trimmed);
+        if (isExternal) return `href=\"${url}\"`;
+        if (trimmed.startsWith(pref + "/") || trimmed === pref) return `href=\"${url}\"`;
+        if (trimmed.startsWith("/")) return `href=\"${pref}${trimmed}\"`;
+        const normalized = trimmed.replace(/^\.\//, "").replace(/^\.\./, "");
+        return `href=\"${pref}/${normalized}\"`;
+      })
     : fragment;
 
   const safeHtml = DOMPurify.sanitize(withRewrittenLinks, {

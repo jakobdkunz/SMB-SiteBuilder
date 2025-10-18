@@ -1,5 +1,5 @@
 import type { Site } from "@/lib/siteSchema";
-import { put, get } from "@vercel/blob";
+import { put } from "@vercel/blob";
 
 declare global {
   var __SITES__: Map<string, Site> | undefined;

@@ -2,6 +2,7 @@ import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { generateSiteSchemaFromSummary } from "@/lib/ai";
 import { setSite, persistSite } from "@/lib/store";
+import { convex } from "@/lib/convex";
 import { SiteSchema } from "@/lib/siteSchema";
 import { getOrCreateGuestId } from "@/lib/guest";
 
@@ -46,7 +47,12 @@ export async function POST(req: Request) {
     const ownerId = userId || await getOrCreateGuestId();
     const parsed = SiteSchema.parse({ ...schema, siteId, ownerId, title: schema?.seo?.title || "Untitled" });
     setSite(parsed);
-    await persistSite(parsed);
+    try {
+      await convex.mutation("sites:setSite", { site: parsed });
+    } catch {}
+    try {
+      await persistSite(parsed); // keep as optional fallback
+    } catch {}
     return NextResponse.json({ siteId });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
