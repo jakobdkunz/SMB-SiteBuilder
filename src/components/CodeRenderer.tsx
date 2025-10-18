@@ -24,7 +24,6 @@ export default function CodeRenderer({ html, css, basePath }: Props) {
     ? fragment.replace(hrefRegex, (_m, url) => {
         const trimmed = String(url || "");
         if (!trimmed) return `href=\"${url}\"`;
-        const lower = trimmed.toLowerCase();
         // Skip external, anchors, protocols, protocol-relative, mailto/tel, already prefixed
         const isExternal = /^(https?:\/\/|\/{2}|mailto:|tel:|#)/i.test(trimmed);
         if (isExternal) return `href=\"${url}\"`;

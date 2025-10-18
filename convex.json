@@ -1,0 +1,6 @@
+{
+  "deployment": "prod:effervescent-otter-439",
+  "functions": "convex/"
+}
+
+
