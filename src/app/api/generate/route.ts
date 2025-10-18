@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { generateSiteSchemaFromSummary } from "@/lib/ai";
 import { setSite, persistSite } from "@/lib/store";
 import { convex } from "@/lib/convex";
+import { api } from "../../../../convex/_generated/api";
 import { SiteSchema } from "@/lib/siteSchema";
 import { getOrCreateGuestId } from "@/lib/guest";
 
@@ -48,7 +49,7 @@ export async function POST(req: Request) {
     const parsed = SiteSchema.parse({ ...schema, siteId, ownerId, title: schema?.seo?.title || "Untitled" });
     setSite(parsed);
     try {
-      await convex.mutation("sites:setSite", { site: parsed });
+      await convex.mutation(api.sites.setSite, { site: parsed });
     } catch {}
     try {
       await persistSite(parsed); // keep as optional fallback
